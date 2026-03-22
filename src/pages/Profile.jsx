@@ -192,6 +192,67 @@ function EditModal({ user, onClose, onSave, isDark }) {
   );
 }
 
+// ── Password Change Modal ─────────────────────────────────────
+function PasswordModal({ onClose, isDark, INP, LBL, border, textPri, textMut }) {
+  const [form, setForm]     = useState({ currentPassword:'', newPassword:'', confirm:'' });
+  const [error, setError]   = useState('');
+  const [success, setSuccess]= useState('');
+  const [loading, setLoading]= useState(false);
+  const surf = isDark ? '#0c1018' : '#ffffff';
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (form.newPassword !== form.confirm) { setError('New passwords do not match'); return; }
+    if (form.newPassword.length < 6) { setError('New password must be at least 6 characters'); return; }
+    setError(''); setLoading(true);
+    try {
+      await API.put('/api/users/me/password', {
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      });
+      setSuccess('Password changed successfully!');
+      setTimeout(onClose, 1500);
+    } catch(err) { setError(err.response?.data?.error || 'Failed to change password'); }
+    finally { setLoading(false); }
+  };
+
+  const inpBord = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)';
+
+  return (
+    <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.65)',zIndex:500,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
+      <div style={{ background:surf,border:`1px solid ${isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'}`,borderRadius:14,padding:28,width:'100%',maxWidth:400,boxShadow:'0 24px 64px rgba(0,0,0,0.3)' }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20 }}>
+          <h2 style={{ fontSize:17,fontWeight:700,color:textPri }}>Change Password</h2>
+          <button onClick={onClose} style={{ background:'none',border:'none',color:textMut,fontSize:22,cursor:'pointer' }}>×</button>
+        </div>
+        {error   && <div style={{ background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:7,padding:'10px 14px',color:'#f87171',fontSize:13,marginBottom:14 }}>{error}</div>}
+        {success && <div style={{ background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)',borderRadius:7,padding:'10px 14px',color:'#34d399',fontSize:13,marginBottom:14 }}>{success}</div>}
+        <form onSubmit={submit} style={{ display:'flex',flexDirection:'column',gap:14 }}>
+          <div><label style={LBL}>Current Password</label>
+            <input type="password" value={form.currentPassword} onChange={e=>setForm(f=>({...f,currentPassword:e.target.value}))} style={INP}
+              onFocus={e=>e.target.style.borderColor='#3b82f6'} onBlur={e=>e.target.style.borderColor=inpBord}/></div>
+          <div><label style={LBL}>New Password</label>
+            <input type="password" value={form.newPassword} onChange={e=>setForm(f=>({...f,newPassword:e.target.value}))} style={INP}
+              onFocus={e=>e.target.style.borderColor='#3b82f6'} onBlur={e=>e.target.style.borderColor=inpBord}/></div>
+          <div><label style={LBL}>Confirm New Password</label>
+            <input type="password" value={form.confirm} onChange={e=>setForm(f=>({...f,confirm:e.target.value}))} style={INP}
+              onFocus={e=>e.target.style.borderColor='#3b82f6'} onBlur={e=>e.target.style.borderColor=inpBord}/></div>
+          <div style={{ display:'flex',gap:10,paddingTop:8,borderTop:`1px solid ${isDark?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}` }}>
+            <button type="submit" disabled={loading}
+              style={{ flex:1,background:'linear-gradient(135deg,#2563eb,#3b82f6)',color:'#fff',border:'none',borderRadius:7,padding:'10px 0',fontSize:13,fontWeight:600,opacity:loading?.6:1 }}>
+              {loading?'Saving…':'Change Password'}
+            </button>
+            <button type="button" onClick={onClose}
+              style={{ background:'transparent',border:`1px solid ${border}`,borderRadius:7,color:textMut,padding:'10px 18px',fontSize:13,fontWeight:600,cursor:'pointer' }}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { id }   = useParams();
   const navigate = useNavigate();
@@ -200,6 +261,8 @@ export default function Profile() {
   const [projects, setProjects] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [editing,  setEditing]  = useState(false);
+  const [pwModal,  setPwModal]  = useState(false);
+  const [delModal, setDelModal] = useState(false);
   const myId  = parseInt(localStorage.getItem('userId'));
   const isOwn = parseInt(id) === myId;
 
@@ -225,14 +288,56 @@ export default function Profile() {
   const textSec = isDark ? '#94a3b8' : '#475569';
   const textMut = isDark ? '#64748b'  : '#94a3b8';
   const btnBord = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)';
+  const inpBg   = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)';
+  const inpBord = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)';
 
   const card = { background:surf, border:`1px solid ${border}`, borderRadius:10, padding:22 };
+  const INP  = { background:inpBg,border:`1.5px solid ${inpBord}`,borderRadius:6,color:textPri,fontSize:13,fontFamily:"'DM Sans',sans-serif",padding:'10px 13px',width:'100%',outline:'none',transition:'border-color .2s' };
+  const LBL  = { fontSize:11,fontWeight:700,color:textMut,textTransform:'uppercase',letterSpacing:1,display:'block',marginBottom:7,fontFamily:"'DM Mono',monospace" };
 
   return (
     <div style={{ maxWidth:720,margin:'0 auto',padding:'0 28px 80px',background:bg,minHeight:'100vh' }}>
-      {editing && <EditModal user={user} isDark={isDark} onClose={()=>setEditing(false)} onSave={load}/>}
+      {editing  && <EditModal user={user} isDark={isDark} onClose={()=>setEditing(false)} onSave={load}/>}
 
-      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'36px 0 22px' }}>
+      {/* ── Password Change Modal ── */}
+      {pwModal && <PasswordModal isDark={isDark} INP={INP} LBL={LBL} border={border} textPri={textPri} textMut={textMut}
+        onClose={()=>setPwModal(false)}/>}
+
+      {/* ── Delete Account Modal ── */}
+      {delModal && (
+        <div style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.7)',zIndex:500,display:'flex',alignItems:'center',justifyContent:'center',padding:20 }}>
+          <div style={{ background:surf,border:`1px solid rgba(239,68,68,0.3)`,borderRadius:14,padding:28,width:'100%',maxWidth:400,boxShadow:'0 24px 64px rgba(0,0,0,0.4)' }}>
+            <div style={{ textAlign:'center',marginBottom:20 }}>
+              <div style={{ fontSize:40,marginBottom:12 }}>⚠️</div>
+              <h2 style={{ fontSize:18,fontWeight:700,color:'#f87171',marginBottom:8 }}>Delete Account</h2>
+              <p style={{ color:textSec,fontSize:13,lineHeight:1.6 }}>
+                This will permanently delete your account and all your data. This cannot be undone.
+              </p>
+            </div>
+            <div style={{ display:'flex',gap:10 }}>
+              <button onClick={async()=>{
+                try {
+                  await API.delete('/api/users/me');
+                  localStorage.clear();
+                  navigate('/login');
+                } catch(err) { alert(err.response?.data?.error||'Failed to delete account'); }
+              }} style={{ flex:1,background:'rgba(239,68,68,0.15)',border:'1px solid rgba(239,68,68,0.35)',borderRadius:7,color:'#f87171',padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',transition:'all .15s' }}
+                onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,0.25)'}
+                onMouseLeave={e=>e.currentTarget.style.background='rgba(239,68,68,0.15)'}>
+                Yes, Delete My Account
+              </button>
+              <button onClick={()=>setDelModal(false)}
+                style={{ flex:1,background:'transparent',border:`1px solid ${border}`,borderRadius:7,color:textMut,padding:'10px 0',fontSize:13,fontWeight:600,cursor:'pointer',transition:'all .15s' }}
+                onMouseEnter={e=>e.currentTarget.style.background=inpBg}
+                onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'36px 0 22px',flexWrap:'wrap',gap:14 }}>
         <div style={{ display:'flex',alignItems:'center',gap:16 }}>
           {user.profileImageUrl
             ? <img src={user.profileImageUrl} alt="profile" style={{ width:60,height:60,borderRadius:60*0.28,objectFit:'cover' }}/>
@@ -246,12 +351,26 @@ export default function Profile() {
           </div>
         </div>
         {isOwn && (
-          <button onClick={()=>setEditing(true)}
-            style={{ background:'transparent',border:`1px solid ${btnBord}`,borderRadius:6,color:textSec,fontSize:13,fontWeight:600,padding:'8px 18px',transition:'all .15s' }}
-            onMouseEnter={e=>{ e.currentTarget.style.background=isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)'; e.currentTarget.style.color=textPri; e.currentTarget.style.borderColor=isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.2)'; }}
-            onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color=textSec; e.currentTarget.style.borderColor=btnBord; }}>
-            ✏ Edit Profile
-          </button>
+          <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
+            <button onClick={()=>setEditing(true)}
+              style={{ background:'transparent',border:`1px solid ${btnBord}`,borderRadius:6,color:textSec,fontSize:13,fontWeight:600,padding:'7px 16px',transition:'all .15s' }}
+              onMouseEnter={e=>{ e.currentTarget.style.background=inpBg; e.currentTarget.style.color=textPri; }}
+              onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color=textSec; }}>
+              ✏ Edit
+            </button>
+            <button onClick={()=>setPwModal(true)}
+              style={{ background:'transparent',border:`1px solid ${btnBord}`,borderRadius:6,color:textSec,fontSize:13,fontWeight:600,padding:'7px 16px',transition:'all .15s' }}
+              onMouseEnter={e=>{ e.currentTarget.style.background=inpBg; e.currentTarget.style.color=textPri; }}
+              onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.color=textSec; }}>
+              🔑 Password
+            </button>
+            <button onClick={()=>setDelModal(true)}
+              style={{ background:'transparent',border:'1px solid rgba(239,68,68,0.25)',borderRadius:6,color:'#f87171',fontSize:13,fontWeight:600,padding:'7px 16px',transition:'all .15s' }}
+              onMouseEnter={e=>e.currentTarget.style.background='rgba(239,68,68,0.08)'}
+              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              🗑 Delete Account
+            </button>
+          </div>
         )}
       </div>
 

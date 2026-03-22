@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import API from '../api/axios';
 import { getMatchScore } from '../api/claude';
-import SkillChip from '../components/SkillChip';
+import SkillChip, { SKILL_CATEGORIES } from '../components/SkillChip';
 import { useTheme } from '../context/ThemeContext';
 
 const AV_COLORS = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#0891b2'];
@@ -127,6 +127,7 @@ export default function Home() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading]         = useState(true);
   const [toast, setToast]             = useState(null);
+  const [skillFilter, setSkillFilter]   = useState([]);
   const search = searchParams.get('search') || '';
 
   const notify = (msg, type='ok') => { setToast({msg,type}); setTimeout(()=>setToast(null),2800); };
@@ -172,11 +173,30 @@ export default function Home() {
         </p>
       </div>
 
-      {/* ── Project count ── */}
-      <div style={{ marginBottom:20 }}>
-        <p style={{ color:textSec,fontSize:13 }}>
-          {projects.length} project{projects.length!==1?'s':''}{search?` for "${search}"`:' available'}
-        </p>
+      {/* ── Project count + skill filter ── */}
+      <div style={{ marginBottom:16 }}>
+        <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,flexWrap:'wrap',gap:8 }}>
+          <p style={{ color:textSec,fontSize:13 }}>
+            {projects.length} project{projects.length!==1?'s':''}{search?` for "${search}"`:' available'}
+          </p>
+          <div style={{ display:'flex',alignItems:'center',gap:6,flexWrap:'wrap' }}>
+            <span style={{ fontSize:11,color:textSec,fontFamily:"'DM Mono',monospace" }}>FILTER:</span>
+            {['React','Python','Flutter','Node.js','Machine Learning','Docker','Figma'].map(s=>(
+              <span key={s} onClick={()=>setSkillFilter(p=>p.includes(s)?p.filter(x=>x!==s):[...p,s])}
+                style={{ cursor:'pointer' }}>
+                <SkillChip skill={s} size="sm" selected={skillFilter.includes(s)}/>
+              </span>
+            ))}
+            {skillFilter.length>0&&(
+              <button onClick={()=>setSkillFilter([])} style={{ background:'none',border:'none',color:'#64748b',fontSize:11,cursor:'pointer',textDecoration:'underline' }}>Clear</button>
+            )}
+          </div>
+        </div>
+        {skillFilter.length>0&&(
+          <p style={{ color:textSec,fontSize:12 }}>
+            Showing projects that require: {skillFilter.join(', ')}
+          </p>
+        )}
       </div>
 
       {/* ── Grid ── */}
@@ -194,11 +214,20 @@ export default function Home() {
         </div>
       ) : (
         <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))',gap:15 }}>
-          {projects.map(p=>(
+          {(skillFilter.length>0
+            ? projects.filter(p=>skillFilter.every(s=>p.skills?.includes(s)))
+            : projects
+          ).map(p=>(
             <ProjectCard key={p.id} project={p} currentUser={currentUser} isDark={isDark}
               onClick={()=>navigate(`/projects/${p.id}`)}
               onJoin={()=>handleJoin(p.id)}/>
           ))}
+          {skillFilter.length>0&&projects.filter(p=>skillFilter.every(s=>p.skills?.includes(s))).length===0&&(
+            <div style={{ gridColumn:'1/-1',textAlign:'center',padding:'60px 0',color:textSec }}>
+              <p style={{ fontSize:14 }}>No projects match the selected skills</p>
+              <button onClick={()=>setSkillFilter([])} style={{ marginTop:10,background:'none',border:'none',color:'#3b82f6',fontSize:13,cursor:'pointer',textDecoration:'underline' }}>Clear filter</button>
+            </div>
+          )}
         </div>
       )}
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>

@@ -64,7 +64,7 @@ export default function Navbar() {
 
       {/* Nav links */}
       <div style={{ display:'flex',gap:2 }}>
-        {[['/', 'Home'], ['/my-projects', 'Projects']].map(([path, label]) => (
+        {[['/', 'Home'], ['/my-projects', 'Projects'], ['/people', 'People']].map(([path, label]) => (
           <button key={path} onClick={() => navigate(path)}
             style={{ background: isActive(path) ? (isDark?'rgba(255,255,255,0.06)':'rgba(0,0,0,0.05)') : 'transparent', border:'none', color: isActive(path) ? textColor : mutedColor, fontSize:13, fontWeight:500, cursor:'pointer', padding:'5px 11px', borderRadius:5, transition:'all .14s' }}
             onMouseEnter={e => {
