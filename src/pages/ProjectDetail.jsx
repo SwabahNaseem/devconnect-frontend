@@ -125,59 +125,80 @@ export default function ProjectDetail() {
   const [tab,         setTab]         = useState(searchParams.get('tab')||'overview');
   const [messages,    setMessages]    = useState([]);
   const [msgText,     setMsgText]     = useState('');
-  const [requests,    setRequests]    = useState([]);
-  const [files,       setFiles]       = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [toast,       setToast]       = useState(null);
-  const [showEdit,    setShowEdit]    = useState(false);
+const [requests, setRequests] = useState([]);
+const [files, setFiles] = useState([]);
+const [loading, setLoading] = useState(true);
+const [toast, setToast] = useState(null);
+const [showEdit, setShowEdit] = useState(false);
 
-  const fileRef    = useRef(null);
-  const msgEndRef  = useRef(null);
-  const myId = parseInt(localStorage.getItem('userId'));
+const fileRef = useRef(null);
+const msgEndRef = useRef(null);
+const myId = parseInt(localStorage.getItem('userId'));
 
-  const notify = (msg, type='ok') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+const notify = (msg, type = 'ok') => {
+  setToast({ msg, type });
+  setTimeout(() => setToast(null), 3000);
+};
 
-  useEffect(() => {
-    API.get(`/api/projects/${id}`).then(r=>{ setProject(r.data); setLoading(false); }).catch(()=>navigate('/'));
-  }, [id]);
+// Load project details
+useEffect(() => {
+  API.get(`/api/projects/${id}`)
+    .then(r => {
+      setProject(r.data);
+      setLoading(false);
+    })
+    .catch(() => navigate('/'));
+}, [id, navigate]); // ✅ include navigate
 
-  useEffect(() => {
-    const uid = localStorage.getItem('userId');
-    if (uid) API.get(`/api/users/${uid}`).then(r=>setCurrentUser(r.data)).catch(()=>{});
-  }, []);
+// Load current user
+useEffect(() => {
+  const uid = localStorage.getItem('userId');
+  if (uid) {
+    API.get(`/api/users/${uid}`)
+      .then(r => setCurrentUser(r.data))
+      .catch(() => {});
+  }
+}, []); // ✅ runs once on mount
 
-  useEffect(() => {
-    if (!project) return;
-    if (project.member) {
-      API.get(`/api/projects/${id}/files`).then(r=>setFiles(r.data)).catch(()=>{});
-    }
-    if (project.isLead) {
-      API.get(`/api/projects/${id}/requests`).then(r=>setRequests(r.data)).catch(()=>{});
-    }
-  }, [project?.id]);
+// Load files and requests when project changes
+useEffect(() => {
+  if (!project) return;
 
-  // ── Poll for new messages every 3 seconds (reliable real-time) ──
-  useEffect(() => {
-    if (!project?.member) return;
+  if (project.member) {
+    API.get(`/api/projects/${id}/files`)
+      .then(r => setFiles(r.data))
+      .catch(() => {});
+  }
+  if (project.isLead) {
+    API.get(`/api/projects/${id}/requests`)
+      .then(r => setRequests(r.data))
+      .catch(() => {});
+  }
+}, [project, id]); // ✅ include project and id
 
-    // Load messages immediately
-    API.get(`/api/projects/${id}/messages`).then(r => setMessages(r.data)).catch(() => {});
+// Poll for new messages every 3 seconds
+useEffect(() => {
+  if (!project?.member) return;
 
-    // Poll every 3 seconds for new messages
-    const interval = setInterval(() => {
-      API.get(`/api/projects/${id}/messages`)
-        .then(r => {
-          setMessages(prev => {
-            // Only update if there are new messages
-            if (r.data.length !== prev.length) return r.data;
-            return prev;
-          });
-        })
-        .catch(() => {});
-    }, 3000);
+  // Load messages immediately
+  API.get(`/api/projects/${id}/messages`)
+    .then(r => setMessages(r.data))
+    .catch(() => {});
 
-    return () => clearInterval(interval);
-  }, [project?.id, project?.member]);
+  // Poll every 3 seconds
+  const interval = setInterval(() => {
+    API.get(`/api/projects/${id}/messages`)
+      .then(r => {
+        setMessages(prev => {
+          if (r.data.length !== prev.length) return r.data;
+          return prev;
+        });
+      })
+      .catch(() => {});
+  }, 3000);
+
+  return () => clearInterval(interval);
+}, [project, id]); // ✅ include project and id
 
   useEffect(() => { msgEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 

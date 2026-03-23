@@ -266,16 +266,27 @@ export default function Profile() {
   const myId  = parseInt(localStorage.getItem('userId'));
   const isOwn = parseInt(id) === myId;
 
-  const load = () => {
-    setLoading(true);
-    Promise.all([API.get(`/api/users/${id}`), API.get('/api/projects')])
-      .then(([uRes,pRes]) => {
-        setUser(uRes.data);
-        setProjects(pRes.data.filter(p=>p.members?.some(m=>m.id===parseInt(id))||p.lead?.id===parseInt(id)));
-      }).catch(()=>navigate('/')).finally(()=>setLoading(false));
-  };
+ const load = () => {
+  setLoading(true);
+  Promise.all([API.get(`/api/users/${id}`), API.get('/api/projects')])
+    .then(([uRes, pRes]) => {
+      setUser(uRes.data);
+      setProjects(
+        pRes.data.filter(
+          p =>
+            p.members?.some(m => m.id === parseInt(id)) ||
+            p.lead?.id === parseInt(id)
+        )
+      );
+    })
+    .catch(() => navigate('/'))
+    .finally(() => setLoading(false));
+};
 
-  useEffect(()=>{ load(); },[id]);
+// Run load whenever id changes
+useEffect(() => {
+  load();
+}, [id, load]); // ✅ include both id and load
 
   if (loading) return <div style={{ textAlign:'center',padding:'80px 0',color:'#64748b' }}>Loading profile…</div>;
   if (!user) return null;

@@ -132,16 +132,28 @@ export default function Home() {
 
   const notify = (msg, type='ok') => { setToast({msg,type}); setTimeout(()=>setToast(null),2800); };
 
-  useEffect(() => {
-    const userId = localStorage.getItem('userId');
-    if (userId) API.get(`/api/users/${userId}`).then(r=>setCurrentUser(r.data)).catch(()=>{});
-  }, []);
+  // Load current user from localStorage
+useEffect(() => {
+  const userId = localStorage.getItem('userId');
+  if (userId) {
+    API.get(`/api/users/${userId}`)
+      .then(r => setCurrentUser(r.data))
+      .catch(() => {});
+  }
+}, []); // ✅ runs once on mount
 
-  useEffect(() => {
-    setLoading(true);
-    const url = search ? `/api/projects/search?term=${encodeURIComponent(search)}` : '/api/projects';
-    API.get(url).then(r=>setProjects(r.data)).catch(()=>notify('Failed to load projects','err')).finally(()=>setLoading(false));
-  }, [search]);
+// Load projects (search or all)
+useEffect(() => {
+  setLoading(true);
+  const url = search
+    ? `/api/projects/search?term=${encodeURIComponent(search)}`
+    : '/api/projects';
+
+  API.get(url)
+    .then(r => setProjects(r.data))
+    .catch(() => notify('Failed to load projects', 'err'))
+    .finally(() => setLoading(false));
+}, [search]); // ✅ depends only on search
 
   const handleJoin = async (projectId) => {
     try {

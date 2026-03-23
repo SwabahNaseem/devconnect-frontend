@@ -6,13 +6,13 @@ export default function AIMatchPanel({ currentUser, project }) {
   const [loading,  setLoading]  = useState(true);
   const [expanded, setExpanded] = useState(true);
 
-  useEffect(() => {
-    if (!currentUser || !project) return;
-    setLoading(true);
-    getMatchScore(currentUser, project)
-      .then(r => setMatch(r))
-      .finally(() => setLoading(false));
-  }, [currentUser?.id, project?.id]);
+useEffect(() => {
+  if (!currentUser || !project) return;
+  setLoading(true);
+  getMatchScore(currentUser, project)
+    .then(r => setMatch(r))
+    .finally(() => setLoading(false));
+}, [currentUser, project]);
 
   const scoreColor  = !match ? '#64748b' : match.score>=80 ? '#10b981' : match.score>=60 ? '#f59e0b' : match.score>=40 ? '#3b82f6' : '#64748b';
   const scoreBg     = !match ? 'rgba(100,116,139,0.08)' : match.score>=80 ? 'rgba(16,185,129,0.08)' : match.score>=60 ? 'rgba(245,158,11,0.08)' : match.score>=40 ? 'rgba(37,99,235,0.08)' : 'rgba(100,116,139,0.08)';
