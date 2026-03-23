@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { useTheme } from '../context/ThemeContext';
-import SkillChip, { SKILL_CATEGORIES, getSkillMeta } from '../components/SkillChip';
+
 
 // All skills flattened from categories - used for search
 const ALL_SKILLS = SKILL_CATEGORIES.flatMap(c => c.skills);
@@ -266,7 +266,7 @@ export default function Profile() {
   const myId  = parseInt(localStorage.getItem('userId'));
   const isOwn = parseInt(id) === myId;
 
- const load = () => {
+ const load = useCallback(() => {
   setLoading(true);
   Promise.all([API.get(`/api/users/${id}`), API.get('/api/projects')])
     .then(([uRes, pRes]) => {
@@ -281,12 +281,11 @@ export default function Profile() {
     })
     .catch(() => navigate('/'))
     .finally(() => setLoading(false));
-};
+}, [id, navigate]); // ✅ dependencies
 
-// Run load whenever id changes
 useEffect(() => {
   load();
-}, [id, load]); // ✅ include both id and load
+}, [load]); // ✅ depends on load id and load
 
   if (loading) return <div style={{ textAlign:'center',padding:'80px 0',color:'#64748b' }}>Loading profile…</div>;
   if (!user) return null;
