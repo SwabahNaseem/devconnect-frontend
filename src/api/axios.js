@@ -1,20 +1,16 @@
 import axios from 'axios';
 
-// All API calls go to Spring Boot on port 8080
 const API = axios.create({
-  baseURL: 'http://localhost:8080',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
+  timeout: 15000, // 15 second timeout — handles slow Neon DB
 });
 
-// Attach JWT token automatically to every request
 API.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// If token is expired, redirect to login
 API.interceptors.response.use(
   (res) => res,
   (err) => {

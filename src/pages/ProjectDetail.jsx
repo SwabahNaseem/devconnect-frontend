@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
 import API from '../api/axios';
 import AIMatchPanel from '../components/AIMatchPanel';
 import SkillChip, { SKILL_CATEGORIES } from '../components/SkillChip';
@@ -132,11 +130,9 @@ export default function ProjectDetail() {
   const [loading,     setLoading]     = useState(true);
   const [toast,       setToast]       = useState(null);
   const [showEdit,    setShowEdit]    = useState(false);
-  const [wsConnected, setWsConnected] = useState(false);
 
   const fileRef    = useRef(null);
   const msgEndRef  = useRef(null);
-  const stompRef   = useRef(null);
   const myId = parseInt(localStorage.getItem('userId'));
 
   const notify = (msg, type='ok') => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
@@ -153,7 +149,6 @@ export default function ProjectDetail() {
   useEffect(() => {
     if (!project) return;
     if (project.member) {
-      API.get(`/api/projects/${id}/messages`).then(r=>setMessages(r.data)).catch(()=>{});
       API.get(`/api/projects/${id}/files`).then(r=>setFiles(r.data)).catch(()=>{});
     }
     if (project.isLead) {
@@ -161,47 +156,44 @@ export default function ProjectDetail() {
     }
   }, [project?.id]);
 
-  // ── WebSocket connection for real-time chat ──────────────────
+  // ── Poll for new messages every 3 seconds (reliable real-time) ──
   useEffect(() => {
     if (!project?.member) return;
-    const token = localStorage.getItem('token');
-    const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
-      connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 5000,
-      onConnect: () => {
-        setWsConnected(true);
-        client.subscribe(`/topic/chat/${id}`, (msg) => {
-          const received = JSON.parse(msg.body);
+
+    // Load messages immediately
+    API.get(`/api/projects/${id}/messages`).then(r => setMessages(r.data)).catch(() => {});
+
+    // Poll every 3 seconds for new messages
+    const interval = setInterval(() => {
+      API.get(`/api/projects/${id}/messages`)
+        .then(r => {
           setMessages(prev => {
-            // Avoid duplicates (message might already be added optimistically)
-            if (prev.some(m => m.id === received.id)) return prev;
-            return [...prev, received];
+            // Only update if there are new messages
+            if (r.data.length !== prev.length) return r.data;
+            return prev;
           });
-        });
-      },
-      onDisconnect: () => setWsConnected(false),
-    });
-    client.activate();
-    stompRef.current = client;
-    return () => { client.deactivate(); };
+        })
+        .catch(() => {});
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, [project?.id, project?.member]);
 
   useEffect(() => { msgEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
-  const sendMsg = () => {
+  const sendMsg = async () => {
     if (!msgText.trim()) return;
-    // Send via WebSocket if connected, else fallback to REST
-    if (stompRef.current?.connected) {
-      stompRef.current.publish({
-        destination: `/app/chat/${id}`,
-        body: JSON.stringify({ text: msgText }),
+    const text = msgText;
+    setMsgText('');
+    try {
+      const res = await API.post(`/api/projects/${id}/messages`, { text });
+      setMessages(prev => {
+        if (prev.some(m => m.id === res.data.id)) return prev;
+        return [...prev, res.data];
       });
-      setMsgText('');
-    } else {
-      API.post(`/api/projects/${id}/messages`, { text: msgText })
-        .then(r => { setMessages(prev => [...prev, r.data]); setMsgText(''); })
-        .catch(() => notify('Failed to send','err'));
+    } catch (err) {
+      notify('Failed to send message', 'err');
+      setMsgText(text);
     }
   };
 
@@ -527,11 +519,11 @@ export default function ProjectDetail() {
             <div style={{ flex:1,display:'flex',alignItems:'center',justifyContent:'center',color:textMut,fontSize:13 }}>Join the project to access chat.</div>
           ):(
             <>
-              {/* Connection status */}
+              {/* Status */}
               <div style={{ display:'flex',alignItems:'center',gap:6,marginBottom:12,paddingBottom:12,borderBottom:`1px solid ${border}` }}>
-                <div style={{ width:7,height:7,borderRadius:'50%',background:wsConnected?'#10b981':'#f59e0b',transition:'background .3s' }}/>
+                <div style={{ width:7,height:7,borderRadius:'50%',background:'#10b981' }}/>
                 <span style={{ fontSize:11,color:textMut,fontFamily:"'DM Mono',monospace" }}>
-                  {wsConnected?'Live — messages appear instantly':'Connecting…'}
+                  Live — updates every 3 seconds
                 </span>
               </div>
 
@@ -562,7 +554,7 @@ export default function ProjectDetail() {
 
               <div style={{ display:'flex',gap:9,paddingTop:12,borderTop:`1px solid ${border}` }}>
                 <input value={msgText} onChange={e=>setMsgText(e.target.value)} onKeyDown={e=>e.key==='Enter'&&!e.shiftKey&&(e.preventDefault(),sendMsg())}
-                  placeholder={wsConnected?"Write a message… (Enter to send)":"Connecting to chat…"}
+                  placeholder="Write a message… (Enter to send)"
                   style={{ ...inp,flex:1 }}
                   onFocus={e=>e.target.style.borderColor='#3b82f6'} onBlur={e=>e.target.style.borderColor=inpBord}/>
                 <button onClick={sendMsg} style={{ background:'linear-gradient(135deg,#2563eb,#3b82f6)',color:'#fff',border:'none',borderRadius:7,padding:'10px 18px',fontSize:13,fontWeight:600,transition:'all .15s' }}
