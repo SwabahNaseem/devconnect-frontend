@@ -44,11 +44,15 @@ function ProjectCard({ project, currentUser, onJoin, onClick, isDark }) {
   const [matchLoading, setMatchLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser) { setMatchLoading(false); return; }
-    setMatchLoading(true);
-    getMatchScore(currentUser, project).then(r=>setMatch(r)).finally(()=>setMatchLoading(false));
-  }, [project.id, currentUser?.id]);
-
+  if (!currentUser) { 
+    setMatchLoading(false); 
+    return; 
+  }
+  setMatchLoading(true);
+  getMatchScore(currentUser, project)
+    .then(r => setMatch(r))
+    .finally(() => setMatchLoading(false));
+}, [currentUser, project]);
   const isMember     = project.member || project.isLead;
   const hasRequested = project.hasRequested;
 
