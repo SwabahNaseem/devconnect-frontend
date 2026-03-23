@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import API from '../api/axios';
 import { getMatchScore } from '../api/claude';
 import SkillChip from '../components/SkillChip'; 
-import SkillChip from '../components/SkillChip'; 
+
 import { useTheme } from '../context/ThemeContext';
 
 const AV_COLORS = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#0891b2'];

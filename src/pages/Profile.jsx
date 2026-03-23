@@ -1,13 +1,13 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+
 import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api/axios';
 import { useTheme } from '../context/ThemeContext';
-import React, { useState, useEffect, useCallback } from 'react';
-import SkillChip from '../components/SkillChip'; 
-import React, { useState, useEffect, useCallback } from 'react';
-import { SKILL_CATEGORIES } from '../constants/skills';
+
+import SkillChip, { SKILL_CATEGORIES } from '../components/SkillChip';
+
+
 // All skills flattened from categories - used for search
 const ALL_SKILLS = SKILL_CATEGORIES.flatMap(c => c.skills);
 
